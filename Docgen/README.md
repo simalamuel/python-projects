@@ -6,5 +6,5 @@
 
 ## Como utilizar:
 ```bash
-python3 docgen.py
+python3 docgen.py [-h] -d {cpf,cnpj,renavam} [-q QUANTIDADE] [-e {SP,BA,PR,Mistos}] [-m] [-o OUTPUT]
 ```
