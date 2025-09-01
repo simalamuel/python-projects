@@ -26,67 +26,73 @@ def generate_cpf(state_option, mask=True):
     else:
         return 0
 
-    cpf = [random.randint(0, 9) for _ in range(9)]
+    cpf_base = [int(d) for d in prefix] + [random.randint(0, 9) for _ in range(7)]
 
-    cpf = [int(digit) for digit in prefix] + cpf[2:]
-
-    def calculate_digit(cpf):
-        weight = [10, 9, 8, 7, 6, 5, 4, 3, 2]
-        total = sum(cpf[i] * weight[i] for i in range(9))
+    def calculate_digit(digits, weights):
+        total = sum(d * w for d, w in zip(digits, weights))
         remainder = total % 11
         return 0 if remainder < 2 else 11 - remainder
 
-    first_digit = calculate_digit(cpf)
-    cpf.append(first_digit)
-    second_digit = calculate_digit(cpf)
-    cpf.append(second_digit)
+    first_digit = calculate_digit(cpf_base, range(10, 1, -1))
+    cpf_base.append(first_digit)
+    second_digit = calculate_digit(cpf_base, range(11, 1, -1))
+    cpf_base.append(second_digit)
 
     if mask:
-        return '%s%s%s.%s%s%s.%s%s%s-%s%s' % tuple(cpf)
+        return '%s%s%s.%s%s%s.%s%s%s-%s%s' % tuple(cpf_base)
     else:
-        return ''.join(map(str, cpf))
+        return ''.join(map(str, cpf_base))
 
 def generate_cnpj(mask=True):
-    def calculate_special_digit(l):
-        digit = 0
-        for i, v in enumerate(l):
-            digit += v * (i % 8 + 2)
-        digit = 11 - digit % 11
-        return digit if digit < 10 else 0
+    base = [random.randint(0, 9) for _ in range(8)] + [0, 0, 0, 1]
 
-    cnpj = [1, 0, 0, 0] + [random.randint(0, 9) for _ in range(8)]
+    def calculate_digit(digits, weights):
+        total = sum(d * w for d, w in zip(digits, weights))
+        remainder = total % 11
+        return 0 if remainder < 2 else 11 - remainder
 
-    for _ in range(2):
-        cnpj = [calculate_special_digit(cnpj)] + cnpj
+    first_weights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    second_weights = [6] + first_weights
+
+    first_digit = calculate_digit(base, first_weights)
+    second_digit = calculate_digit(base + [first_digit], second_weights)
+
+    cnpj = base + [first_digit, second_digit]
 
     if mask:
-        return '%s%s.%s%s%s.%s%s%s/%s%s%s%s-%s%s' % tuple(cnpj[::-1])
+        return "%s%s.%s%s%s.%s%s%s/%s%s%s%s-%s%s" % tuple(cnpj)
     else:
-        return ''.join(map(str, cnpj[::-1]))
+        return ''.join(map(str, cnpj))
 
 def generate_renavam(mask=True):
-    renavam = [random.randint(0, 9) for _ in range(8)]
-    weights = [2, 3, 4, 5, 6, 7, 8, 9]
-    total = sum(renavam[i] * weights[i] for i in range(8))
+    renavam = [random.randint(0, 9) for _ in range(10)]
+
+    weights = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    total = sum(d * w for d, w in zip(renavam, weights))
     remainder = total % 11
-    check_digit = 11 - remainder if remainder >= 2 else 0
-    renavam.append(random.randint(0, 9))  # Adiciona um número extra para completar os 11 dígitos
-    renavam.append(check_digit)
+    dv = 0 if remainder == 0 or remainder == 1 else 11 - remainder
+
+    renavam.append(dv)
 
     if mask:
-        return '%s%s%s.%s%s%s.%s%s%s-%s' % tuple(renavam)
+        return "%s%s%s.%s%s%s.%s%s%s-%s" % tuple(renavam)
     else:
         return ''.join(map(str, renavam))
 
 def main():
     parser = argparse.ArgumentParser(description="Gerador de documentos aleatórios.")
-    parser.add_argument("-d", "--documento", type=str, required=True, choices=["cpf", "cnpj", "renavam"],
+    parser.add_argument("-d", "--documento", type=str, required=True,
+                        choices=["cpf", "cnpj", "renavam"],
                         help="Tipo de documento a ser gerado: 'cpf', 'cnpj' ou 'renavam'.")
-    parser.add_argument("-q", "--quantidade", type=int, default=1, help="Quantidade de documentos a serem gerados.")
-    parser.add_argument("-e", "--estado", type=str, choices=["SP", "BA", "PR", "Mistos"],
+    parser.add_argument("-q", "--quantidade", type=int, default=1,
+                        help="Quantidade de documentos a serem gerados.")
+    parser.add_argument("-e", "--estado", type=str,
+                        choices=["SP", "BA", "PR", "Mistos"],
                         help="Estado para geração de CPF (opcional, apenas para 'cpf').")
-    parser.add_argument("-m", "--mascara", action="store_true", help="Adiciona máscara ao documento gerado.")
-    parser.add_argument("-o", "--output", type=str, help="Nome do arquivo de saída para salvar os documentos.")
+    parser.add_argument("-m", "--mascara", action="store_true",
+                        help="Adiciona máscara ao documento gerado.")
+    parser.add_argument("-o", "--output", type=str,
+                        help="Nome do arquivo de saída para salvar os documentos.")
 
     args = parser.parse_args()
 
@@ -94,6 +100,7 @@ def main():
         args.estado = "Mistos"
 
     documentos = []
+
     if args.documento == "cpf":
         documentos = [generate_cpf(args.estado, mask=args.mascara) for _ in range(args.quantidade)]
     elif args.documento == "cnpj":
